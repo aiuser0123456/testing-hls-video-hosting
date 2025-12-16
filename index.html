@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="index, follow">
+    <title>Stream Player</title>
+
+    <!-- OpenGraph -->
+    <meta property="og:title" content="Live Stream Player">
+    <meta property="og:type" content="website">
+
+    <!-- Plyr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3.6.12/dist/plyr.css" />
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .plyr {
+            height: 100%;
+        }
+
+        /* Telegram banner */
+        .tg-banner {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: linear-gradient(135deg, rgba(29,161,242,.85), rgba(0,119,181,.85));
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            color: #fff;
+            z-index: 1000;
+            text-decoration: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,.3);
+        }
+
+        .tg-banner img {
+            width: 28px;
+            height: 28px;
+            margin-right: 10px;
+            border-radius: 50%;
+        }
+
+        /* Popup */
+        .modal {
+            position: fixed;
+            inset: 0;
+            backdrop-filter: blur(6px);
+            background: rgba(0,0,0,.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .modal-content {
+            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 18px;
+            padding: 25px;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .modal-content h2 {
+            color: #facc15;
+        }
+
+        .modal-content button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+        }
+
+        #joinButton {
+            background: linear-gradient(to right,#3b82f6,#06b6d4);
+            color: #fff;
+        }
+
+        #closeButton {
+            background: rgba(255,255,255,.15);
+            color: #fff;
+        }
+
+        .error-message {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,.7);
+            color: #fff;
+            z-index: 10000;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- Telegram banner -->
+<a href="https://t.me/+tsTzlm760chhZDI1" class="tg-banner" target="_blank">
+    <img src="https://i.pinimg.com/originals/31/2a/f9/312af9235aadad69655688eaee97eabf.png">
+    <span>Join m3u8 player</span>
+</a>
+
+<!-- Video -->
+<video id="player" autoplay muted playsinline controls></video>
+
+<!-- Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.1.4/dist/hls.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/plyr@3.6.12/dist/plyr.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const video = document.getElementById('player');
+
+    // 🔴 CHANGE THIS TO YOUR STREAM
+    const STREAM_URL = "https://aiuser0123456.github.io/testing-hls-video-hosting/CURRENT_ELECTRICITY_01.m3u8";
+
+    function showError(msg) {
+        const div = document.createElement('div');
+        div.className = 'error-message';
+        div.innerText = msg;
+        document.body.appendChild(div);
+    }
+
+    if (Hls.isSupported()) {
+        const hls = new Hls({
+            enableWorker: true,
+            liveSyncDuration: 10
+        });
+
+        hls.loadSource(STREAM_URL);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+
+            const qualities = hls.levels.map(l => l.height).filter(Boolean);
+
+            new Plyr(video, {
+                autoplay: true,
+                muted: true,
+                controls: [
+                    'play-large',
+                    'play',
+                    'mute',
+                    'volume',
+                    'settings',
+                    'fullscreen',
+                    'pip'
+                ],
+                quality: {
+                    default: qualities[0],
+                    options: qualities,
+                    forced: true,
+                    onChange: q => {
+                        hls.levels.forEach((l, i) => {
+                            if (l.height === q) hls.currentLevel = i;
+                        });
+                    }
+                }
+            });
+
+            video.play().catch(()=>{});
+        });
+
+        hls.on(Hls.Events.ERROR, (_, data) => {
+            if (data.fatal) showError("Stream offline or unavailable");
+        });
+
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = STREAM_URL;
+        new Plyr(video);
+        video.play();
+    } else {
+        showError("HLS not supported in this browser");
+    }
+});
+</script>
+
+<!-- Telegram popup -->
+<script>
+window.onload = () => {
+    const popup = document.createElement('div');
+    popup.className = 'modal';
+    popup.innerHTML = `
+        <div class="modal-content">
+            <h2>Support Us</h2>
+            <p>Join our Telegram channel <b>m3u8 player</b></p>
+            <button id="joinButton">Join Now</button>
+            <button id="closeButton">Already Joined</button>
+        </div>
+    `;
+    document.body.appendChild(popup);
+
+    document.getElementById('joinButton').onclick = () =>
+        window.open("https://t.me/+tsTzlm760chhZDI1", "_blank");
+
+    document.getElementById('closeButton').onclick = () =>
+        popup.remove();
+};
+</script>
+
+</body>
+</html>
