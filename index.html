@@ -1,0 +1,90 @@
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.1.4/dist/hls.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/plyr@3.6.12/dist/plyr.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const video = document.getElementById('player');
+
+    // 🔴 PUT YOUR M3U8 LINK HERE
+    const HLS_STREAM_URL = "https://aiuser0123456.github.io/testing-hls-video-hosting/hls/index.m3u8";
+
+    let hls;
+    let plyrPlayer;
+
+    function initPlayer(source) {
+        if (!source) {
+            showError("Stream URL not available");
+            return;
+        }
+
+        if (Hls.isSupported()) {
+            hls = new Hls({
+                maxMaxBufferLength: 60,
+                liveSyncDuration: 10,
+                enableWorker: true
+            });
+
+            hls.loadSource(source);
+            hls.attachMedia(video);
+
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                const qualities = hls.levels.map(l => l.height).filter(Boolean);
+                const defaultQuality = qualities[0];
+
+                plyrPlayer = new Plyr(video, {
+                    autoplay: true,
+                    muted: true,
+                    controls: [
+                        'play-large',
+                        'play',
+                        'mute',
+                        'volume',
+                        'settings',
+                        'fullscreen',
+                        'pip'
+                    ],
+                    quality: {
+                        default: defaultQuality,
+                        options: qualities,
+                        forced: true,
+                        onChange: (q) => {
+                            hls.levels.forEach((l, i) => {
+                                if (l.height === q) hls.currentLevel = i;
+                            });
+                        }
+                    }
+                });
+
+                video.play().catch(() => {
+                    console.log("Autoplay blocked, waiting for user interaction");
+                });
+            });
+
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                if (data.fatal) {
+                    showError("Stream is offline or unavailable");
+                }
+            });
+
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = source;
+            plyrPlayer = new Plyr(video, { autoplay: true });
+            video.play();
+        } else {
+            showError("Your browser does not support HLS playback");
+        }
+    }
+
+    function showError(msg) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.innerText = msg;
+        document.body.appendChild(errorDiv);
+    }
+
+    // 🚀 AUTO START STREAM
+    initPlayer(HLS_STREAM_URL);
+
+});
+</script>
